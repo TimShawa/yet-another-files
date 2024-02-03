@@ -66,7 +66,7 @@ func set_path(value: String) -> void:
 		file_type = &'Folder'
 		filename_label.text = path.split('/',0)[-1]
 		if $'..'.owner.plugin:
-			folder_color = $'..'.owner.plugin.load_folder_color(path)
+			folder_color = $'..'.owner.plugin.config_folder_colors(&'get', path, Color.DARK_GRAY).value
 	else:
 		is_directory = false
 		file_type = get_file_type(path)

@@ -34,10 +34,12 @@ enum FileMenu {
 }
 
 var action: Callable = func(id): print(id, 'not connected')
-var drawer_path: NodePath
 
 # Copied from engine source code
 func context_fill(paths: PackedStringArray, display_path_dependent_options: bool, in_tree: bool = false):
+	clear()
+	for i in get_children():
+		i.free()
 	# Add options for files and folders.
 	if paths.has('res://'):
 		paths.remove_at(paths.find('res://'))
@@ -134,13 +136,20 @@ func context_fill(paths: PackedStringArray, display_path_dependent_options: bool
 			var folder_colors_menu := PopupMenu.new()
 			folder_colors_menu.name = 'FolderColor'
 			
-			folder_colors_menu.add_icon_item(icon(&'Load'), tr('Default (Reset)'), 20)
+			folder_colors_menu.add_icon_item(icon(&'Load'), tr('Reset (Default)'), 100)
+			folder_colors_menu.add_icon_item(icon(&'Add'), tr('Select New...'), 101)
 			
-			var picker := ColorPicker.new()
-			folder_colors_menu.add_child(picker)
-			folder_colors_menu.add_submenu_item(tr('Select New...'), 'FolderColor')
-			folder_colors_menu.set_item_icon(-1, icon(&'Add'))
-			folder_colors_menu.set_item_id(-1, 21)
+			var plugin: ContentManagerPlugin = $'..'.plugin
+			var history: Array = plugin.config_folder_colors(&'get_history').value
+			if history.size():
+				folder_colors_menu.add_separator()
+				for i in history.size():
+					folder_colors_menu.add_icon_item( icon(&'Folder'), '#' + history[i].to_upper(), i )
+					folder_colors_menu.set_item_icon_modulate(-1, Color.html(history[i]))
+				folder_colors_menu.add_separator()
+				folder_colors_menu.add_icon_item(icon(&'Remove'), tr('(Clear)'), 103)
+			
+			folder_colors_menu.connect('id_pressed', _color_id_pressed.bind(paths))
 			
 			add_child(folder_colors_menu)
 			add_submenu_item(tr('Set Folder Color...'), 'FolderColor')
@@ -203,14 +212,38 @@ func context_fill(paths: PackedStringArray, display_path_dependent_options: bool
 	add_item(tr('Info'), FileMenu.FILE_INFO)
 
 
-#func _ready() -> void:
-	#connect('id_pressed', func(id, f = action): f.call(id))
-
-
 func icon(name: StringName) -> Texture2D:
 	return EditorInterface.get_editor_theme().get_icon(name, 'EditorIcons')
 
 
-func _id_pressed(id: int):
+func _id_pressed(id: FileMenu):
 	var drawer = $'..' as ContentManager
 	drawer.file_option(id)
+
+
+func _color_id_pressed(id: int, paths: PackedStringArray):
+	hide()
+	var yaf: ContentManagerPlugin = $'..'.plugin
+	if id == 100:
+		for i in paths:
+			yaf.config_folder_colors(&'reset', i)
+	elif id == 101:
+		var popup = PopupPanel.new();   popup.hide();               popup.wrap_controls = true
+		var picker = ColorPicker.new(); picker.edit_alpha = false
+		popup.add_child(picker);        $'..'.add_child(popup)
+		popup.popup_centered()
+		
+		await popup.visibility_changed
+		var color = picker.color
+		popup.queue_free()
+		
+		for i in paths:
+			yaf.config_folder_colors(&'set', i, color)
+	elif id == 103:
+		yaf.config_folder_colors(&'clear_history')
+	elif id in range(10):
+		var color_code = yaf.config_folder_colors(&'get_history').value[id]
+		for i in paths:
+			yaf.config_folder_colors(&'set', i, Color.html(color_code))
+	
+	$'..'.update_content()

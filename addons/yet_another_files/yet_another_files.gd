@@ -32,6 +32,7 @@ func _enter_tree() -> void:
 		await get_tree().physics_frame
 		filesystem = EditorInterface.get_resource_filesystem()
 	
+	init_configuration()
 	drawer = DRAWER.instantiate()
 	drawer.filesystem = filesystem
 	drawer.plugin = self
@@ -49,7 +50,6 @@ func _enter_tree() -> void:
 	#Engine.register_singleton('YAFTheme', load('res://addons/yet_another_files/assets/yaf_theme.gd'))
 	add_autoload_singleton('YAFTheme', 'res://addons/yet_another_files/assets/yaf_theme.gd')
 	
-	init_configuration()
 
 
 func _exit_tree() -> void:
@@ -102,84 +102,117 @@ func init_configuration():
 		DirAccess.make_dir_absolute('res://.yafcfg')
 	if !FileAccess.file_exists( 'res://.yafcfg/folder_colors.res' ):
 		var data := PackedDataContainer.new()
-		data.pack({})
-		ResourceSaver.save(data, 'res://.yafcfg/favorites.res')
+		data.pack({&'history': []})
+		ResourceSaver.save(data, 'res://.yafcfg/folder_colors.res')
 	if OWN_FAVS:
 		if !FileAccess.file_exists( 'res://.yafcfg/favorites.res' ):
 			var data := PackedDataContainer.new()
-			data.pack({})
+			data.pack([])
 			ResourceSaver.save(data, 'res://.yafcfg/favorites.res')
 	filesystem.scan()
+	filesystem.scan_sources()
 
 
-func config_favorites(action: StringName, arg = null):
+func config_favorites(action: StringName, path = null):
+	var result = { 'value': null, 'error_code': OK }
 	var favs_packed = load('res://.yafcfg/favorites.res') as PackedDataContainer
 	var favorites = []
 	for i in favs_packed:
 		favorites.append(i)
 	match action:
 		&'add':
-			if arg not in favorites:
-				favorites.append(arg)
-				return true
-			return ERR_ALREADY_EXISTS
-		&'contains':
-			return arg in favorites
+			if path not in favorites:
+				favorites.append(path)
+			else:
+				result.error_code = ERR_ALREADY_EXISTS
+		&'check':
+			result.value = path in favorites
 		&'remove':
-			if arg in favorites:
-				favorites.erase(arg)
-			return ERR_UNAVAILABLE
+			if path in favorites:
+				favorites.erase(path)
+			else:
+				result.error_code = ERR_UNAVAILABLE
 		&'get':
-			return favorites
-		&'set':
-			favorites = arg
-			favs_packed.pack(favorites)
+			result.value = favorites
 		&'clear':
 			favorites = []
 		&'init':
 			favorites = EditorInterface.get_editor_settings().get_favorites()
+			result.value = favorites
 		_:
-			return ERR_SKIP
-	favs_packed.pack(favorites)
-	return OK
+			result.error_code = ERR_SKIP
+	if result.error_code == OK:
+		favs_packed.pack(favorites)
+	return result
 
 
-func _save_external_data() -> void: pass
-
-
-func reset_folder_color(dir) -> void:
-	var colors_packed := load('res://.yafcfg/folder_colors.res') as PackedDataContainer
-	var dir_hash := String.num_uint64(dir.hash())
-	var folder_colors: Dictionary
-	for key in colors_packed:
-		folder_colors[key] = colors_packed[key]
-	if dir_hash in folder_colors:
-		folder_colors.erase(dir_hash)
-	colors_packed.pack(folder_colors)
-
-
-func save_folder_color(dir: String, color: Color) -> void:
-	var colors_packed := load('res://.yafcfg/folder_colors.res') as PackedDataContainer
-	var dir_hash := String.num_uint64(dir.hash())
-	var folder_colors: Dictionary
-	for key in colors_packed:
-		folder_colors[key] = colors_packed[key]
-	folder_colors[ dir_hash ] = color.to_html(0)
-	colors_packed.pack(folder_colors)
-
-
-func load_folder_color(dir: String) -> Color:
-	var colors_packed := load('res://.yafcfg/folder_colors.res') as PackedDataContainer
-	var dir_hash = String.num_uint64(dir.hash())
-	var found := false
-	for key in colors_packed:
-		if key == dir_hash:
-			found = true
-			break
-	if found:
-		return Color.html( colors_packed[ dir_hash ] )
-	return Color.GRAY
-
-
-static func get_file_preview(path: String, file: DirContentItem):
-	EditorInterface.get_resource_previewer().queue_resource_preview(path, file, 'set_icon_preview', null)
+func config_folder_colors(action: StringName, path = '', color = null):
+	var result = { 'value': null, 'error_code': OK }
+	var cols_packed = load('res://.yafcfg/folder_colors.res') as PackedDataContainer
+	var colors = {}
+	var path_hash = String.num_uint64(path.hash())
+	const HIST_SIZE = 10
+	for key in cols_packed:
+		colors[key] = cols_packed[key]
+	
+	var history = []
+	if colors.history:
+		for col in colors.history:
+			history.push_back(col)
+	
+	var add_to_history = ''
+	
+	match action:
+		&'set':
+			colors[ path_hash ] = StringName( color.to_html() )
+			add_to_history = colors[ path_hash ]
+		&'add':
+			if path_hash not in colors:
+				colors[ path_hash ] = StringName( color.to_html() )
+				add_to_history = colors[ path_hash ]
+			else:
+				result.value = Color.html( colors[path_hash] )
+				result.error_code = ERR_ALREADY_EXISTS
+		&'change':
+			if path_hash in colors:
+				colors[ path_hash ] = color
+				add_to_history = colors[ path_hash ]
+			else:
+				result.error_code = ERR_UNAVAILABLE
+		&'reset':
+			if path_hash in colors:
+				colors.erase( path_hash )
+			else:
+				result.error_code = ERR_UNAVAILABLE
+		&'check':
+			result.value = path_hash in colors
+			result.error_code = ERR_SKIP
+		&'get':
+			if path_hash in colors:
+				result.value = Color.html( colors[path_hash] )
+				result.error_code = ERR_SKIP
+			else:
+				result.value = color
+				result.error_code = ERR_UNAVAILABLE
+		&'clear':
+			colors.clear()
+		&'get_history':
+			result.value = history
+			result.error_code = ERR_SKIP
+		&'clear_history':
+			history = []
+		_:
+			result.error_code = ERR_INVALID_PARAMETER
+	
+	if add_to_history:
+		if history.has(add_to_history):
+			history.erase(add_to_history)
+		history.push_front(add_to_history)
+		history = history.slice(0, HIST_SIZE)
+	
+	if result.error_code == OK:
+		colors.history = history
+		cols_packed.pack( colors )
+		ResourceSaver.save(cols_packed, 'res://.yafcfg/folder_colors.res')
+	if result.error_code == ERR_SKIP: result.error_code = OK
+	return result
