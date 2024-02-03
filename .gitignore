@@ -1,3 +1,6 @@
+# Project specified configuration
+.yafcfg/
+
 # Dev supporting addons
 addons/SimpleTODO
 addons/ColorPreview

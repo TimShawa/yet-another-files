@@ -17,7 +17,7 @@ var native_dock: FileSystemDock
 var native_dock_layout := EditorPlugin.DOCK_SLOT_LEFT_BR
 var dock_children: Array
 var bottom = true
-
+const OWN_FAVS := false
 
 func _has_main_screen() -> bool:
 	return true
@@ -48,6 +48,8 @@ func _enter_tree() -> void:
 	
 	#Engine.register_singleton('YAFTheme', load('res://addons/yet_another_files/assets/yaf_theme.gd'))
 	add_autoload_singleton('YAFTheme', 'res://addons/yet_another_files/assets/yaf_theme.gd')
+	
+	init_configuration()
 
 
 func _exit_tree() -> void:
@@ -95,13 +97,58 @@ func create_new(id: EDockID):
 	# SCRIPT - done.
 
 
+func init_configuration():
+	if !DirAccess.dir_exists_absolute('res://.yafcfg'):
+		DirAccess.make_dir_absolute('res://.yafcfg')
+	if !FileAccess.file_exists( 'res://.yafcfg/folder_colors.res' ):
+		var data := PackedDataContainer.new()
+		data.pack({})
+		ResourceSaver.save(data, 'res://.yafcfg/favorites.res')
+	if OWN_FAVS:
+		if !FileAccess.file_exists( 'res://.yafcfg/favorites.res' ):
+			var data := PackedDataContainer.new()
+			data.pack({})
+			ResourceSaver.save(data, 'res://.yafcfg/favorites.res')
+	filesystem.scan()
+
+
+func config_favorites(action: StringName, arg = null):
+	var favs_packed = load('res://.yafcfg/favorites.res') as PackedDataContainer
+	var favorites = []
+	for i in favs_packed:
+		favorites.append(i)
+	match action:
+		&'add':
+			if arg not in favorites:
+				favorites.append(arg)
+				return true
+			return ERR_ALREADY_EXISTS
+		&'contains':
+			return arg in favorites
+		&'remove':
+			if arg in favorites:
+				favorites.erase(arg)
+			return ERR_UNAVAILABLE
+		&'get':
+			return favorites
+		&'set':
+			favorites = arg
+			favs_packed.pack(favorites)
+		&'clear':
+			favorites = []
+		&'init':
+			favorites = EditorInterface.get_editor_settings().get_favorites()
+		_:
+			return ERR_SKIP
+	favs_packed.pack(favorites)
+	return OK
+
+
 func _save_external_data() -> void: pass
 
 
 func reset_folder_color(dir) -> void:
-	var plugin_path = get_script().resource_path.get_base_dir()
-	dir = dir.trim_suffix('/') + '/'
-	var colors_packed := load(plugin_path.path_join('config/folder_colors.res')) as PackedDataContainer
+	var colors_packed := load('res://.yafcfg/folder_colors.res') as PackedDataContainer
 	var dir_hash := String.num_uint64(dir.hash())
 	var folder_colors: Dictionary
 	for key in colors_packed:
@@ -112,9 +159,7 @@ func reset_folder_color(dir) -> void:
 
 
 func save_folder_color(dir: String, color: Color) -> void:
-	var plugin_path = get_script().resource_path.get_base_dir()
-	dir = dir.trim_suffix('/') + '/'
-	var colors_packed := load(plugin_path.path_join('config/folder_colors.res')) as PackedDataContainer
+	var colors_packed := load('res://.yafcfg/folder_colors.res') as PackedDataContainer
 	var dir_hash := String.num_uint64(dir.hash())
 	var folder_colors: Dictionary
 	for key in colors_packed:
@@ -124,9 +169,7 @@ func save_folder_color(dir: String, color: Color) -> void:
 
 
 func load_folder_color(dir: String) -> Color:
-	var plugin_path = get_script().resource_path.get_base_dir()
-	dir = dir.trim_suffix('/') + '/'
-	var colors_packed := load(plugin_path.path_join('config/folder_colors.res')) as PackedDataContainer
+	var colors_packed := load('res://.yafcfg/folder_colors.res') as PackedDataContainer
 	var dir_hash = String.num_uint64(dir.hash())
 	var found := false
 	for key in colors_packed:
