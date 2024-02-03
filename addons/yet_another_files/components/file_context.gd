@@ -199,6 +199,8 @@ func context_fill(paths: PackedStringArray, display_path_dependent_options: bool
 				add_icon_item( icon(&'ExternalLink'), tr('Open in External Program'), FileMenu.FILE_OPEN_EXTERNAL )
 			
 			add_icon_item( icon(&'Terminal'), tr('Open in Terminal') if is_directory else tr('Show in Terminal') )
+	add_separator()
+	add_item(tr('Info'), FileMenu.FILE_INFO)
 
 
 #func _ready() -> void:

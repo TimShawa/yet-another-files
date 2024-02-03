@@ -282,7 +282,7 @@ func file_navigate(path: String, fs_safe := false) -> void:
 
 
 func file_context(path) -> void:
-	if selection.is_empty():
+	if selection.size() < 2 and path not in selection:
 		file_select(path)
 	var popup := $FileContext as FileContext
 	popup.clear()
@@ -315,7 +315,7 @@ func file_option(op: FileContext.FileMenu, path: String = current_dir.get_curren
 				elif file_type == &'Resource' or ClassDB.is_parent_class(file_type, &'Resource'):
 					EditorInterface.edit_resource(load(path))
 				else:
-					print('Ignored: File "', path.get_file(), '" cannot be modified within Godot.')
+					push_warning('Ignored: File "', path.get_file(), '" cannot be modified within Godot.')
 		
 		option.FILE_INHERIT:
 			EditorInterface.get_file_system_dock().emit_signal('inherit', path)
@@ -376,9 +376,25 @@ func file_option(op: FileContext.FileMenu, path: String = current_dir.get_curren
 				DirAccess.copy_absolute(path, copy_path)
 				filesystem.scan()
 
-		option.FILE_INFO: pass
+		option.FILE_INFO:
+			var item: DirContentItem
+			for i in %ContentField.get_children():
+				if i.path == path:
+					item = i
+					break
+			if item:
+				print('---------------- ', item.path, ' ----------------')
+				prints( ('Folder:' if item.is_directory else 'File:').rpad(10), item.path.trim_suffix('/').split('/')[-1] + ('/' if item.is_directory else '') )
+				prints( 'Location:'.rpad(10), item.path.trim_suffix('/').get_base_dir() + '/' )
+				if item.file_type not in [ &'File', &'Folder' ]:
+					prints( 'Resource:'.rpad(10), item.file_type )
+				elif item.file_type == &'Folder':
+					prints( 'Folders:'.rpad(10), DirAccess.get_directories_at(item.path).size() )
+					prints( 'Files:'.rpad(10), DirAccess.get_files_at(item.path).size() )
+				print()
 
-		option.FILE_REIMPORT: pass
+		option.FILE_REIMPORT:
+			filesystem.update_file(path)
 
 		option.FILE_NEW_FOLDER:
 			EditorInterface.select_file(current_dir.get_current_dir())
@@ -589,3 +605,4 @@ func match_filters(file: String, rule: StringName = &'contains'):
 			return file.match(filter_search)
 		&'maskn':
 			return file.matchn(filter_search)
+	return true

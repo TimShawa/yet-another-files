@@ -59,8 +59,8 @@ func invalidate() -> void:
 			queue_free()
 
 
-func set_path(value) -> void:
-	path = value
+func set_path(value: String) -> void:
+	path = value.replace('///', '//')
 	if path.ends_with('/'):
 		is_directory = true
 		file_type = &'Folder'
