@@ -141,13 +141,16 @@ func get_parent_dir(path: String = current_dir.get_current_dir()):
 		return 'res://'
 
 
-func change_dir(new_dir: String, fs_safe := false) -> Error:
+func change_dir(new_dir: String, fs_safe := true) -> Error:
 	var err := current_dir.change_dir(new_dir)
-	if !fs_safe:
-		EditorInterface.get_file_system_dock().navigate_to_path(current_dir.get_current_dir())
-	selection.clear()
-	upd_path_label()
-	update_content()
+	if err == OK:
+		if !fs_safe:
+			var files = DirAccess.get_files_at(current_dir.get_current_dir())
+			if files.size():
+				EditorInterface.get_file_system_dock().navigate_to_path(current_dir.get_current_dir().path_join(files[0]))
+		selection.clear()
+		upd_path_label()
+		update_content()
 	return err
 
 
@@ -510,9 +513,9 @@ func set_setting(id) -> void:
 			%ContentField.propagate_call('update_display')
 
 
-func apply_scale() -> void:
-	%ContentField.add_theme_constant_override('h_separation', roundi(10.0 * EditorInterface.get_editor_scale()))
-	%ContentField.add_theme_constant_override('v_separation', roundi(45.0 * EditorInterface.get_editor_scale()))
+func apply_scale() -> void: pass
+	#%ContentField.add_theme_constant_override('h_separation', roundi(10.0 * EditorInterface.get_editor_scale()))
+	#%ContentField.add_theme_constant_override('v_separation', roundi(45.0 * EditorInterface.get_editor_scale()))
 
 
 #region Box Selection

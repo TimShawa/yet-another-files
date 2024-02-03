@@ -1,3 +1,8 @@
+# Dev supporting addons
+addons/SimpleTODO
+addons/ColorPreview
+TODO.cfg
+
 # Godot 4+ specific ignores
 .godot/
 

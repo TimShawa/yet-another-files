@@ -136,3 +136,7 @@ func load_folder_color(dir: String) -> Color:
 	if found:
 		return Color.html( colors_packed[ dir_hash ] )
 	return Color.GRAY
+
+
+static func get_file_preview(path: String, file: DirContentItem):
+	EditorInterface.get_resource_previewer().queue_resource_preview(path, file, 'set_icon_preview', null)

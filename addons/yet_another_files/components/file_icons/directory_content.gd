@@ -26,7 +26,6 @@ var file_type := &'File':
 		file_type = value
 		if 'filetype_label' in self:
 			get('filetype_label').set_text(file_type if file_type not in [ &'File', &'Folder' ] else '')
-const ENABLE_PREVIEWS := true
 const FOLDER_ICON: Texture2D = preload('res://addons/yet_another_files/assets/icons/icon_folder.png')
 @export var icon_size: float = 110:	set = set_icon_size
 
@@ -44,9 +43,6 @@ func update_display() -> void:
 	if 'file_panel' in self and 'folder_panel' in self:
 		get('file_panel').visible = !is_directory
 		get('folder_panel').visible = is_directory
-	if !is_directory and file_preview and ENABLE_PREVIEWS:
-		var previewer := EditorInterface.get_resource_previewer()
-		previewer.queue_resource_preview( path, self as DirContentItem, &'set_icon_preview', 0 )
 
 
 func _enter_tree() -> void:
@@ -178,11 +174,3 @@ func _on_focus_entered() -> void:
 	var field := $'..'.owner.get_node_or_null(^'%ContentField') as Control
 	if field:
 		field.grab_focus()
-
-
-func set_icon_preview(path, preview: Texture2D, thumbnail: Texture2D, userdata):
-	if ENABLE_PREVIEWS and preview:
-		file_preview.show()
-		file_preview.texture = preview
-	else:
-		file_preview.hide()
