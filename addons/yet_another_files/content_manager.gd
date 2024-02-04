@@ -5,7 +5,13 @@ class_name ContentManager
 #region Properties
 
 @onready var path_interactive: HBoxContainer = $Container/Header/HBoxContainer/Path/ScrollContainer/PathInteractive
-const CONTENT_ITEM: PackedScene = preload('res://addons/yet_another_files/components/file_icons/file_icon_big.scn')
+const CONTENT_ITEM: Array[PackedScene] = [
+	null,
+	null,
+	preload('res://addons/yet_another_files/components/file_icons/file_icon_medium.scn'),
+	preload('res://addons/yet_another_files/components/file_icons/file_icon_big.scn'),
+	preload('res://addons/yet_another_files/components/file_icons/file_icon_large.scn')
+]
 const PATH_ENTRY: PackedScene = preload('res://addons/yet_another_files/components/path_list_entry.scn')
 var filesystem: EditorFileSystem
 var plugin: EditorPlugin
@@ -29,29 +35,6 @@ enum ESettingsPopupOption {
 
 enum EIconSize { TINY, SMALL, MEDIUM, BIG, LARGE }
 
-const IconSize := {
-	EIconSize.TINY: {
-		'icon_size': Vector2i(110, 110*1.7),
-		'grid_separation': Vector2i(13, 64)
-	},
-	EIconSize.SMALL: {
-		'icon_size': Vector2i(110, 110*1.7),
-		'grid_separation': Vector2i(13, 64)
-	},
-	EIconSize.MEDIUM: {
-		'icon_size': Vector2i(90, 90*1.7),
-		'grid_separation': Vector2i(13, 64)
-	},
-	EIconSize.BIG: {
-		'icon_size': Vector2i(110, 110*1.7),
-		'grid_separation': Vector2i(13, 80)
-	},
-	EIconSize.LARGE: {
-		'icon_size': Vector2i(110, 110*1.7),
-		'grid_separation': Vector2i(13, 64)
-	}
-}
-
 #endregion
 
 
@@ -70,7 +53,6 @@ func _ready() -> void:
 		filesystem.connect('filesystem_changed', update_content)
 	change_dir(EditorInterface.get_current_path())
 	upd_path_label()
-	apply_scale()
 
 
 #region Import
@@ -194,7 +176,7 @@ func update_content() -> void:
 
 
 func add_content_item(name: String, directory: bool = false) -> DirContentItem:
-	var item := CONTENT_ITEM.instantiate() as DirContentItem
+	var item := CONTENT_ITEM[icon_size].instantiate() as DirContentItem
 	%ContentField.add_child(item)
 	item.connect('selected', file_select)
 	item.connect('opened', func(path,drawer=self): drawer.file_option(0, path))
@@ -481,6 +463,7 @@ func _on_content_field_gui_input(event: InputEvent) -> void:
 					elif event.button_mask == MOUSE_BUTTON_MASK_LEFT | KEY_MASK_SHIFT:
 						start_box_selection(&'add')
 
+
 func _on_but_settings_ready() -> void:
 	await get_tree().create_timer(0.1)
 	var popup = %ButSettings.get_popup() as PopupMenu
@@ -499,6 +482,7 @@ func _on_but_settings_ready() -> void:
 	popup.hide_on_item_selection = false
 	for i in EIconSize.size():
 		icon_size_popup.add_check_item(EIconSize.keys()[i], i)
+		icon_size_popup.set_item_disabled(i, i < EIconSize.MEDIUM)
 	icon_size_popup.connect('id_pressed', change_icon_size)
 	icon_size_popup.name = 'IconSizePopup'
 	popup.add_child(icon_size_popup)
@@ -527,11 +511,6 @@ func set_setting(id) -> void:
 			hide_handheld_controls = !hide_handheld_controls
 			popup.set_item_checked(popup.get_item_index(id), hide_handheld_controls)
 			%ContentField.propagate_call('update_display')
-
-
-func apply_scale() -> void: pass
-	#%ContentField.add_theme_constant_override('h_separation', roundi(10.0 * EditorInterface.get_editor_scale()))
-	#%ContentField.add_theme_constant_override('v_separation', roundi(45.0 * EditorInterface.get_editor_scale()))
 
 
 #region Box Selection
@@ -580,12 +559,10 @@ func _on_content_field_focus_entered() -> void:
 var icon_size := EIconSize.BIG
 func change_icon_size(new: EIconSize):
 	icon_size = new
-	#%ContentField.propagate_call('set_icon_size', [ IconSize[new].icon_size ])
-	#%ContentField.add_theme_constant_override('h_separation', IconSize[new].grid_separation.x)
-	#%ContentField.add_theme_constant_override('v_separation', IconSize[new].grid_separation.y)
 	var popup := %ButSettings.get_popup().get_node_or_null(^'IconSizePopup') as PopupMenu
 	for i in popup.item_count:
 		popup.set_item_checked(i, i == icon_size)
+	update_content()
 
 
 func _on_search_line_text_changed(new_text: String) -> void:

@@ -3,6 +3,7 @@ extends Node
 
 const DYNAMIC_BG = false
 const BLIND = 0.2
+const BG_OPACITY = 0.3
 
 func get_file_type(file_type) -> StringName:
 	if !ClassDB.class_exists(file_type):
@@ -47,7 +48,7 @@ func get_file_background(path: String, imported_type: StringName = &'Resource') 
 	var tint
 	var color = get_file_color(path, file_type)
 	if !DYNAMIC_BG:
-		return Color(color, 0.3).lightened(BLIND)
+		return Color(color, BG_OPACITY).lightened(BLIND)
 	if 'bg_colored' not in file_types[ file_type ]:
 		return Color(color, file_types.Resource.bg_colored).lightened(BLIND)
 	else:

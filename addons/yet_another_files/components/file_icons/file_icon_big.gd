@@ -62,7 +62,7 @@ func set_icon_size(new_size):
 	var main_font: Font = EditorInterface.get_editor_theme().get_font('main', 'EditorFonts')
 	var mono_font: Font = EditorInterface.get_editor_theme().get_font('main_msdf', 'EditorFonts')
 	if main_panel:
-		main_panel.custom_minimum_size.y = icon_size * S
+		main_panel.custom_minimum_size.y = icon_size.x * S
 	if filename_label:
 		filename_label.label_settings.font_size = font_size * S
 		filename_label.label_settings.font = main_font

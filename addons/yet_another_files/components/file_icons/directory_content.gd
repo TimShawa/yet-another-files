@@ -15,7 +15,7 @@ signal size_changed(w)
 @export var file_preview: ThumbnailPanel
 @export var handheld_selector: CheckBox
 @export var filename_label: Label
-@export var THEME: Node
+@export var THEME: YAFTheme
 @export_group('')
 var path: String = 'res://icon.svg':	set = set_path
 var is_directory := false
@@ -27,7 +27,7 @@ var file_type := &'File':
 		if 'filetype_label' in self:
 			get('filetype_label').set_text(file_type if file_type not in [ &'File', &'Folder' ] else '')
 const FOLDER_ICON: Texture2D = preload('res://addons/yet_another_files/assets/icons/icon_folder.png')
-@export var icon_size: float = 110:	set = set_icon_size
+@export var icon_size := Vector2(110, 110*1.6):	set = set_icon_size
 
 
 func set_icon_size(value): # TODO need to reimplement
@@ -35,7 +35,7 @@ func set_icon_size(value): # TODO need to reimplement
 	if icon_size != value:
 		emit_signal('size_changed')
 	icon_size = value
-	custom_minimum_size = icon_size * Vector2(1, 1.6) * S
+	custom_minimum_size = icon_size * S
 	reset_size()
 
 
