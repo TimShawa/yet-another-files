@@ -15,7 +15,7 @@ signal size_changed(w)
 @export var file_preview: ThumbnailPanel
 @export var handheld_selector: CheckBox
 @export var filename_label: Label
-@export var THEME: YAFTheme
+@export var THEME: Node
 @export_group('')
 var path: String = 'res://icon.svg':	set = set_path
 var is_directory := false

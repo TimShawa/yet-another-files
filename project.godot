@@ -14,10 +14,6 @@ config/name="yet_another_files"
 config/features=PackedStringArray("4.2", "GL Compatibility")
 config/icon="res://icon.svg"
 
-[autoload]
-
-YAFTheme="*res://addons/yet_another_files/assets/yaf_theme.gd"
-
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/ColorPreview/plugin.cfg", "res://addons/yet_another_files/plugin.cfg")

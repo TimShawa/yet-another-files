@@ -10,21 +10,26 @@ enum EDockID {
 	NEW_RESOURCE = 15,
 }
 @onready var DRAWER: PackedScene = load('res://addons/yet_another_files/content_manager.scn')
-var drawer: Control
+var drawer: ContentManager
 var filesystem: EditorFileSystem
-var hide_native: bool = false
+const SHOW_AS_TAB := true
+const HIDE_NATIVE := false
+const HIDE_BOTTOM := true
 var native_dock: FileSystemDock
 var native_dock_layout := EditorPlugin.DOCK_SLOT_LEFT_BR
 var dock_children: Array
 var bottom = true
 const OWN_FAVS := false
+var config = ConfigFile.new()
+var defaults = ConfigFile.new()
+
 
 func _has_main_screen() -> bool:
-	return true
+	return SHOW_AS_TAB
 func _get_plugin_name() -> String:
 	return 'Content'
 func _get_plugin_icon() -> Texture2D:
-	return EditorInterface.get_editor_theme().get_icon('Folder', 'EditorIcons')
+	return EditorInterface.get_editor_theme().get_icon('Load', 'EditorIcons')
 
 
 func _enter_tree() -> void:
@@ -32,34 +37,27 @@ func _enter_tree() -> void:
 		await get_tree().physics_frame
 		filesystem = EditorInterface.get_resource_filesystem()
 	
-	init_configuration()
+	_init_configuration()
 	drawer = DRAWER.instantiate()
 	drawer.filesystem = filesystem
 	drawer.plugin = self
 	await get_tree().physics_frame
 	
-	add_control_to_bottom_panel(drawer, 'Asset Drawer')
+	if !HIDE_BOTTOM or !SHOW_AS_TAB:
+		add_control_to_bottom_panel(drawer, 'Content')
 	native_dock = EditorInterface.get_file_system_dock()
-	
-	await get_tree().process_frame
-	
-	if hide_native:
-		remove_control_from_docks(native_dock)
 	dock_children = native_dock.get_children()
-	
-	#Engine.register_singleton('YAFTheme', load('res://addons/yet_another_files/assets/yaf_theme.gd'))
-	add_autoload_singleton('YAFTheme', 'res://addons/yet_another_files/assets/yaf_theme.gd')
-	
+	if HIDE_NATIVE:
+		remove_control_from_docks(native_dock)
+	drawer.icon_size = yafcfg_get('Display:icon_size')
 
 
 func _exit_tree() -> void:
-	if bottom:
+	if !HIDE_BOTTOM and bottom:
 		remove_control_from_bottom_panel(drawer)
 	drawer.queue_free()
-	if hide_native:
+	if HIDE_NATIVE:
 		add_control_to_dock(native_dock_layout, native_dock)
-	#Engine.unregister_singleton('YAFTheme')
-	remove_autoload_singleton('YAFTheme')
 
 
 func _set_window_layout(configuration: ConfigFile) -> void:
@@ -71,12 +69,14 @@ func _make_visible(visible: bool) -> void:
 	if !visible and !bottom:
 		bottom = true
 		EditorInterface.get_editor_main_screen().remove_child(drawer)
-		add_control_to_bottom_panel(drawer, 'Content')
+		if SHOW_AS_TAB and !HIDE_BOTTOM:
+			add_control_to_bottom_panel(drawer, 'Content')
 		return
 		
 	if visible and bottom:
 		bottom = false
-		remove_control_from_bottom_panel(drawer)
+		if SHOW_AS_TAB and !HIDE_BOTTOM:
+			remove_control_from_bottom_panel(drawer)
 		EditorInterface.get_editor_main_screen().add_child(drawer)
 		drawer.show()
 	
@@ -93,11 +93,11 @@ func create_new(id: EDockID):
 	if id == EDockID.NEW_SCENE:
 		dock_children[id].get_child(1).get_child(0).get_child(-3).get_child(0).emit_signal('text_changed', '')
 		dock_children[id].get_child(1).get_child(0).get_child(-3).get_child(0).grab_focus()
-	# For RESOURCE i'll make my own implementation.
-	# SCRIPT - done.
 
 
-func init_configuration():
+#region Configuration
+
+func _init_configuration():
 	if !DirAccess.dir_exists_absolute('res://.yafcfg'):
 		DirAccess.make_dir_absolute('res://.yafcfg')
 	if !FileAccess.file_exists( 'res://.yafcfg/folder_colors.res' ):
@@ -109,6 +109,11 @@ func init_configuration():
 			var data := PackedDataContainer.new()
 			data.pack([])
 			ResourceSaver.save(data, 'res://.yafcfg/favorites.res')
+	if !FileAccess.file_exists('res://.yafcfg/config.ini'):
+		config.save('res://.yafcfg/config.ini')
+	else:
+		config.load('res://.yafcfg/config.ini')
+	defaults.load('res://addons/yet_another_files/config/config.default.ini')
 	filesystem.scan()
 	filesystem.scan_sources()
 
@@ -216,3 +221,39 @@ func config_folder_colors(action: StringName, path = '', color = null):
 		ResourceSaver.save(cols_packed, 'res://.yafcfg/folder_colors.res')
 	if result.error_code == ERR_SKIP: result.error_code = OK
 	return result
+
+
+#region YAF-CFG
+
+func yafcfg_set(field: String, value: Variant):
+	var section = field.split(':')[0]
+	var key = field.split(':')[1]
+	if value != defaults.get_value(section, key):
+		config.set_value(section, key, value)
+	else:
+		config.erase_section_key(section, key)
+
+
+func yafcfg_get(field) -> Variant:
+	var section = field.split(':')[0]
+	var key = field.split(':')[1]
+	return config.get_value( section, key, defaults.get_value(section, key) )
+
+
+func yafcfg_reset(field):
+	var section = field.split(':')[0]
+	var key = field.split(':')[1]
+	if config.has_section_key(section, key):
+		config.erase_section_key(section, key)
+
+
+func yafcfg_flush() -> Error:
+	return config.save('res://.yafcfg/config.ini')
+
+
+func yafcfg_revert():
+	config.load('res://.yafcfg/config.ini')
+
+#endregion
+
+#endregion

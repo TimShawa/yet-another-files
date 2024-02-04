@@ -1,5 +1,6 @@
 @tool
 extends Node
+class_name YAFTheme
 
 const DYNAMIC_BG = false
 const BLIND = 0.2
