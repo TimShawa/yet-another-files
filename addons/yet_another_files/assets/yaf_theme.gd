@@ -6,7 +6,7 @@ const DYNAMIC_BG = false
 const BLIND = 0.2
 const BG_OPACITY = 0.3
 
-func get_file_type(file_type) -> StringName:
+static func get_file_type(file_type) -> StringName:
 	if !ClassDB.class_exists(file_type):
 		if file_type in [ &'File', &'TextFile' ]:
 			return file_type
@@ -17,7 +17,7 @@ func get_file_type(file_type) -> StringName:
 	return file_type
 
 
-func get_file_icon(path: String, imported_type: StringName = &'Resource') -> Texture2D:
+static func get_file_icon(path: String, imported_type: StringName = &'Resource') -> Texture2D:
 	var file_type: StringName = get_file_type(imported_type)
 	if &'icon' not in file_types[ file_type ]:
 		return load(file_types.Resource.icon)
@@ -33,7 +33,7 @@ func get_file_icon(path: String, imported_type: StringName = &'Resource') -> Tex
 	return icon
 
 
-func get_file_color(path: String, imported_type: StringName = &'Resource') -> Color:
+static func get_file_color(path: String, imported_type: StringName = &'Resource') -> Color:
 	var file_type: StringName = get_file_type(imported_type)
 	if 'color' not in file_types[ file_type ]:
 		return file_types.Resource.color
@@ -44,7 +44,7 @@ func get_file_color(path: String, imported_type: StringName = &'Resource') -> Co
 	return color
 
 
-func get_file_background(path: String, imported_type: StringName = &'Resource') -> Color:
+static func get_file_background(path: String, imported_type: StringName = &'Resource') -> Color:
 	var file_type: StringName = get_file_type(imported_type)
 	var tint
 	var color = get_file_color(path, file_type)
@@ -61,7 +61,7 @@ func get_file_background(path: String, imported_type: StringName = &'Resource') 
 	return color.lightened(BLIND)
 
 
-func get_cyclesafe_ref(field: StringName, reference: String, max_steps = 100) -> StringName:
+static func get_cyclesafe_ref(field: StringName, reference: String, max_steps = 100) -> StringName:
 	reference = reference.trim_prefix('type://')
 	var types := []
 	for i in max_steps:
@@ -100,7 +100,7 @@ const file_types := {
 		'icon': 'res://addons/yet_another_files/assets/icons/icon_file_gdscript.png'
 	},
 	'Texture2D': {
-		'color': Color(0.6432, 0.268, 0.268, 1),
+		'color': Color.BROWN,
 		'icon': 'res://addons/yet_another_files/assets/icons/svg/icon_image_texture.svg'
 	},
 	'Image': {

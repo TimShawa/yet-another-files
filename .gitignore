@@ -2,9 +2,8 @@
 .yafcfg/
 
 # Dev supporting addons
-addons/SimpleTODO
-addons/ColorPreview
-TODO.cfg
+addons/TODO_Manager/
+addons/ColorPreview/
 
 # Godot 4+ specific ignores
 .godot/
