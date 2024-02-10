@@ -331,7 +331,7 @@ func file_option(op: FileContext.FileMenu, path: String = current_dir.get_curren
 			filesystem.scan()
 
 		option.FILE_DEPENDENCIES:
-			$DependencyEditor.edit(path)
+			plugin.open_deps_editor(path)
 
 		option.FILE_OWNERS: pass
 
@@ -340,11 +340,10 @@ func file_option(op: FileContext.FileMenu, path: String = current_dir.get_curren
 		option.FILE_RENAME: pass
 
 		option.FILE_REMOVE:
-			# оказалось, дело вовсе не в этом куске кода. на самом деле проблема в выделении файлов
 			var popup = AcceptDialog.new()
 			popup.dialog_text = 'Dependency fix wasn\'t implemented in this plugin, so deleting files within it may cause hart to your project. Are you sure?'
 			popup.ok_button_text = 'Noticed'
-			popup.title = 'Warning! Please .'
+			popup.title = 'Warning! Please confirm.'
 			add_child(popup)
 			popup.popup_centered()
 			await popup.confirmed

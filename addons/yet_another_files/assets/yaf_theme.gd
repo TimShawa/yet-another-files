@@ -2,9 +2,11 @@
 extends Node
 class_name YAFTheme
 
+
 const DYNAMIC_BG = false
 const BLIND = 0.2
 const BG_OPACITY = 0.3
+
 
 static func get_file_type(file_type) -> StringName:
 	if !ClassDB.class_exists(file_type):

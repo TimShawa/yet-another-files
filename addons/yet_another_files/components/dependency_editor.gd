@@ -1,13 +1,17 @@
 @tool
-extends Window
+extends PanelContainer
 class_name DependencyEditor
 
+
+const SCENE = preload('res://addons/yet_another_files/components/dependency_editor.scn')
+var plugin: ContentManagerPlugin
 @onready var dep_graph: GraphEdit = $Panel/VBox/Panel/DepGraph
 var dependencies: Array[Dictionary] = []
 var owners = []
 
 
 func edit(path):
+	await dep_graph.clean()
 	var type = EditorInterface.get_resource_filesystem().get_file_type(path)
 	if type.is_empty():
 		type = &'File'
@@ -18,26 +22,14 @@ func edit(path):
 	fill_owners(path, type)
 	for dep in dependencies:
 		dep_graph.add_dependency(dep.path, dep.type)
+	dep_graph.align_dependencies()
 	for own in owners:
 		dep_graph.add_owner(own.path, own.type)
-	popup_centered()
+	dep_graph.align_owners()
 
 
 func close_window() -> void:
-	hide()
-	dep_graph.clear_connections()
-	for node in dep_graph.get_children():
-		dep_graph.remove_child(node)
-		node = null
-	dep_graph.dependencies.clear()
-	dep_graph.owners.clear()
-
-
-func _on_window_input(event: InputEvent) -> void:
-	if event is InputEventKey:
-		if !event.is_echo() and !event.pressed:
-			if event.get_keycode_with_modifiers() == KEY_ESCAPE:
-				close_window()
+	plugin.close_deps_editor()
 
 
 func fill_dependencies(path, type):
