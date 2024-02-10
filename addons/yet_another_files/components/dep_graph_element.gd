@@ -4,6 +4,7 @@ class_name DepGraphElement
 
 
 signal title_ready
+signal rename_requested(dependency)
 
 const SCENE = preload('res://addons/yet_another_files/components/dep_graph_element.scn')
 var b_title_ready = false:
@@ -17,15 +18,17 @@ var type_icon: TextureRect
 var height = 215
 var path: String
 
-
+var dep_type = null
 const DEPENDENCY = -1
 const EDITED = 0
 const OWNER = 1
 
 
 func _ready() -> void:
-	get_theme_stylebox('panel_selected', 'GraphNode').border_color = Color(EditorInterface.get_editor_theme().get_color('highlight_color', 'Editor'), 1)
-	get_theme_stylebox('titlebar_selected', 'GraphNode').border_color = Color(EditorInterface.get_editor_theme().get_color('highlight_color', 'Editor'), 1)
+	get_theme_stylebox('panel_selected', 'GraphNode').border_color = \
+		Color(EditorInterface.get_editor_theme().get_color('highlight_color', 'Editor'), 1)
+	get_theme_stylebox('titlebar_selected', 'GraphNode').border_color = \
+		Color(EditorInterface.get_editor_theme().get_color('highlight_color', 'Editor'), 1)
 	if !b_title_ready:
 		var hbox = get_titlebar_hbox()
 		type_icon = TextureRect.new()
@@ -65,7 +68,9 @@ func _ready() -> void:
 		b_title_ready = true
 
 
-func configure(depend: int, path: String, type: StringName):
+func configure(depend: int, path: String, type: StringName = ''):
+	if type.is_empty():
+		type = EditorInterface.get_resource_filesystem().get_file_type(path)
 	name = path.get_file().get_basename().to_pascal_case() + '_' + path.get_extension().to_upper()
 	if !b_title_ready:
 		await title_ready
@@ -73,6 +78,7 @@ func configure(depend: int, path: String, type: StringName):
 	type_label.text = type
 	type_icon.texture = YAFTheme.get_file_icon(path, type)
 	self.path = path
+	dep_type = depend
 	
 	match depend:
 		DEPENDENCY:
@@ -86,12 +92,13 @@ func configure(depend: int, path: String, type: StringName):
 			set_slot_enabled_right(0, 0)
 	
 	var color = YAFTheme.get_file_color(path, type)
-	set_slot_color_left(0, color)
-	set_slot_color_right(0, color)
+	var edited = color.darkened(0.15)
+	set_slot_color_left(0, color if depend else edited)
+	set_slot_color_right(0, color if depend else edited)
+	get_theme_stylebox('titlebar', 'GraphNode').border_color = color.darkened(0.4) if depend else edited
+	get_theme_stylebox('panel', 'GraphNode').border_color = color.darkened(0.4) if depend else edited
 	get_theme_stylebox('titlebar', 'GraphNode').bg_color = color.darkened(0.4)
-	get_theme_stylebox('titlebar', 'GraphNode').border_color = color.darkened(0.4)
 	get_theme_stylebox('titlebar_selected', 'GraphNode').bg_color = color.darkened(0.4)
-	get_theme_stylebox('panel', 'GraphNode').border_color = color.darkened(0.4)
 	type_label.label_settings.font_color = color.lightened(0.6)
 	
 	if type not in [ &'GDScript' ]:
@@ -109,6 +116,7 @@ func set_preview(path: String, preview: Texture2D, thumbnail: Texture2D, color: 
 	else:
 		$HBox/Ratio.hide()
 		get_theme_stylebox('panel', 'GraphNode').bg_color = color.darkened(0.6)
+		get_theme_stylebox('panel_selected', 'GraphNode').bg_color = color.darkened(0.6)
 
 
 func has_preview(file, type) -> bool:
@@ -119,13 +127,10 @@ func has_preview(file, type) -> bool:
 	return false
 
 
-# open on double-click
-func request_rename(): pass
-
-
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		if event.button_mask == MOUSE_BUTTON_MASK_LEFT:
 			if !event.is_echo() and event.pressed:
 				if event.double_click:
-					request_rename()
+					if dep_type == DEPENDENCY:
+						emit_signal('rename_requested', path)

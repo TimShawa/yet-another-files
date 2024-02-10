@@ -35,6 +35,22 @@ static func get_file_icon(path: String, imported_type: StringName = &'Resource')
 	return icon
 
 
+static func get_file_thumbnail(path: String, imported_type: StringName = &'Resource') -> Texture2D:
+	var file_type: StringName = get_file_type(imported_type)
+	if &'thumbnail' not in file_types[ file_type ]:
+		return get_file_icon(path, imported_type)
+	var thumbnail = file_types[ file_type ].thumbnail
+	if thumbnail is String:
+		if thumbnail.begins_with('editor://'):
+			thumbnail = thumbnail.trim_prefix('editor://').split('/')
+			thumbnail = EditorInterface.get_editor_theme().get_icon(thumbnail[1], thumbnail[0])
+		else:
+			if thumbnail.begins_with('type://'):
+				file_type = get_cyclesafe_ref('icon', thumbnail)
+			thumbnail = load(file_types[ file_type ].thumbnail)
+	return thumbnail
+
+
 static func get_file_color(path: String, imported_type: StringName = &'Resource') -> Color:
 	var file_type: StringName = get_file_type(imported_type)
 	if 'color' not in file_types[ file_type ]:
@@ -94,7 +110,9 @@ const file_types := {
 	'Resource': {
 		'color': Color(1, 1, 1, 1),
 		'bg_colored': 0.1,
-		'icon': 'res://addons/yet_another_files/assets/icons/svg/icon_resource.svg'
+		'icon': 'res://addons/yet_another_files/assets/icons/icon_file_blank.png',
+		#'icon': 'res://addons/yet_another_files/assets/icons/svg/icon_resource.svg',
+		'thumbnail': 'editor://EditorIcons/Object'
 	},
 	'GDScript': {
 		'color': Color(0, 0.5411, 1, 1),
@@ -110,7 +128,8 @@ const file_types := {
 		'icon': 'type://Texture2D'
 	},
 	'PackedScene': {
-		'color': Color(1, 0.6094, 0, 1)
+		'color': Color(1, 0.6094, 0, 1),
+		'thumbnail': 'editor://EditorIcons/PackedScene'
 	},
 	'Mesh': {
 		'color' = Color.YELLOW

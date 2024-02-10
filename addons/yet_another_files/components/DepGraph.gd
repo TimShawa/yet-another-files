@@ -28,6 +28,7 @@ func add_dependency(path, type):
 	connect_node(dep.name, 0, edited.name, 0)
 	if dependencies.size() > 1:
 		dep.position_offset.y = dependencies[-2].position_offset.y + dependencies[-2].size.y + separation.y
+	dep.connect('rename_requested', owner._on_dep_rename_requested)
 
 
 func add_owner(path, type):
