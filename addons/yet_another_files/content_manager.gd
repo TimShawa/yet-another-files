@@ -68,34 +68,28 @@ func _on_file_dialog_canceled() -> void:
 	files_to_import = []
 
 
-func _on_file_dialog_confirmed() -> void: pass
-	#var copied: PackedStringArray = []
-	#var canceled: bool = false
-	#for i in range(len(files_to_import)):
-		#if !current_dir.file_exists(files_to_import[i].get_file()):
-			#file_copy(files_to_import[i])
-			#copied.append(files_to_import[i])
-		#else:
-			#$FileExist.popup_centered($FileExist.size)
-			#await $FileExist.changed
-			#print($FileExist.state)
-			#match $FileExist.state:
-				#'canceled':
-					#canceled = true
-				#'ignored':
-					#pass
-				#'overwritten':
-					#file_copy(files_to_import[i])
-					#copied.append(files_to_import[i])
-			#$FileExist.reset()
-	#print(current_dir.get_files())
-	#if canceled:
-		#for file in copied:
-			#remove_file(file.get_file())
-			#if current_dir.file_exists(file + '.import'):
-				#remove_file(file + '.import')
-	#files_to_import = []
-	#filesystem.scan()
+func _on_file_dialog_confirmed() -> void:
+	var log: Array[Dictionary] = []
+	var import_paths = []
+	var destination = ProjectSettings.globalize_path( current_dir.get_current_dir() )
+	for file in files_to_import:
+		import_paths.push_back( destination.path_join( file.get_file() ) )
+	for i in files_to_import.size():
+		var err = file_copy(files_to_import[i], import_paths[i], FileDialog.ACCESS_FILESYSTEM)
+		log.push_back({
+			'file': files_to_import[i].get_file(),
+			'error': error_string(err).to_snake_case().replace('_', '-') if err else ''
+		})
+	
+	print('-'.repeat(64))
+	for i in log.size():
+		var file = log[i].file as String
+		var error = log[i].error as String
+		printt(file.left(32).rpad(32), '|', error.left(16).rpad(16))
+	print('-'.repeat(64))
+	print('Done.')
+	
+	filesystem.scan()
 
 #endregion
 
@@ -283,8 +277,10 @@ func file_context(path) -> void:
 	popup.reset_size()
 
 
-func file_option(op: FileContext.FileMenu, path: String = current_dir.get_current_dir()) -> void:
+func file_option(op: FileContext.FileMenu, path: String = '') -> void:
 	if selection.size(): path = selection[0]
+	if path in [ '', 'void' ]:
+		path = current_dir.get_current_dir().trim_prefix('/') + '/'
 	var option := FileContext.FileMenu
 	match op:
 		
@@ -340,16 +336,7 @@ func file_option(op: FileContext.FileMenu, path: String = current_dir.get_curren
 		option.FILE_RENAME: pass
 
 		option.FILE_REMOVE:
-			var popup = AcceptDialog.new()
-			popup.dialog_text = 'Dependency fix wasn\'t implemented in this plugin, so deleting files within it may cause hart to your project. Are you sure?'
-			popup.ok_button_text = 'Noticed'
-			popup.title = 'Warning! Please confirm.'
-			add_child(popup)
-			popup.popup_centered()
-			await popup.confirmed
-			popup.queue_free()
-			DirAccess.remove_absolute(path)
-			%ContentField.propagate_call('invalidate')
+			$RemoveDialog.request_delete(selection)
 
 		option.FILE_DUPLICATE:
 			var dialog := $DuplicateDialog as Window
@@ -393,16 +380,18 @@ func file_option(op: FileContext.FileMenu, path: String = current_dir.get_curren
 			plugin.create_new(plugin.EDockID.NEW_SCENE)
 
 		option.FILE_NEW_SCRIPT:
-			var dialog = ScriptCreateDialog.new()
-			add_child(dialog)
-			dialog.config('Node', current_dir.get_current_dir().path_join('new_script.gd'))
-			dialog.popup_centered()
-			await dialog.script_created or dialog.canceled
-			dialog.queue_free()
-			#var answer = await $CreateScript.request_create(path)
-			#if answer.size():
-				#var access := FileAccess.open(answer[0], FileAccess.WRITE)
-				#access.store_pascal_string(answer[1])
+			if path in selection:
+				if path.ends_with('/'):
+					path = path.left(-1)
+			var answer = await $CreateScript.request_create(path.get_base_dir())
+			if answer.size():
+				var script = answer[0]
+				var source = answer[1]
+				var res = GDScript.new()
+				res.source_code = source
+				res.resource_path = script
+				ResourceSaver.save(res)
+				EditorInterface.get_resource_filesystem().scan()
 
 		option.FILE_COPY_PATH:
 			DisplayServer.clipboard_set(path)
@@ -424,6 +413,24 @@ func file_option(op: FileContext.FileMenu, path: String = current_dir.get_curren
 			dialog.connect('confirmed', func(call = wait): call.call(true))
 			await wait
 			dialog.queue_free()
+
+
+func file_copy(source: String, target: String, access: FileDialog.Access = FileDialog.ACCESS_RESOURCES) -> Error:
+	if source.is_relative_path() or target.is_relative_path():
+		return ERR_FILE_BAD_PATH
+	match access:
+		FileDialog.ACCESS_USERDATA:
+			if !source.begins_with('user://') or !target.begins_with('user://'):
+				return ERR_FILE_NO_PERMISSION
+		FileDialog.ACCESS_RESOURCES:
+			if !source.begins_with('user://') or !target.begins_with('user://'):
+				return ERR_FILE_NO_PERMISSION
+	if !FileAccess.file_exists(source):
+		return ERR_DOES_NOT_EXIST
+	if FileAccess.file_exists(target):
+		ERR_ALREADY_EXISTS
+	DirAccess.copy_absolute(source, target)
+	return OK
 
 #endregion
 
@@ -604,6 +611,3 @@ func update_status(field: StringName):
 				'elem': %ContentField.get_child_count(),
 				'selected': String.num_int64(selection.size()),
 			})
-
-# depejdencies: ResourceLoader.get_dependencoes(), EditorFormatLoader._rename_dependencies()
-#TODO: Create DependencyEditor

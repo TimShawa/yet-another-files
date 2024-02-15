@@ -37,7 +37,7 @@ var quick_classes := {
 
 
 func request_create(path: String) -> Array[String]:
-	location = path.get_base_dir().trim_prefix('/') + '/'
+	location = path.trim_prefix('/') + '/'
 	win_select_parent.popup_centered()
 	var answer = await finished
 	if finished:

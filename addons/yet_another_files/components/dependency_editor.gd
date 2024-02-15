@@ -62,7 +62,7 @@ func fill_owners(path, type, folder = EditorInterface.get_resource_filesystem().
 func _on_dep_rename_requested(dep):
 	var dialog = EditorFileDialog.new()
 	dialog.file_mode = EditorFileDialog.FILE_MODE_OPEN_FILE
-	dialog.current_dir = edited.get_base_dir()
+	dialog.current_dir = dep.get_base_dir()
 	get_tree().root.add_child(dialog)
 	dialog.connect('file_selected', rename_dependency.bind(dep))
 	dialog.popup_centered_ratio(0.6)
@@ -73,28 +73,29 @@ func _on_dep_rename_requested(dep):
 
 func rename_dependency(rename, dependency):
 	print('Renaming "', dependency, '" to "', rename, '"...')
-	var res = load(edited) as Resource
-	if res is PackedScene:
-		var vars = res.get('_bundled').variants
-		for i in vars.size():
-			if vars[i] is Resource:
-				if vars[i].resource_path.split('::').size() == 1:
-					if vars[i].resource_path == dependency:
-						vars[i] = load(rename)
-		res.set_indexed(^'_bundled:variant', vars)
-	if res is Mesh:
-		for i in res.get_property_list():
-			if res.get(i.name) is Resource:
-				print(dependency)
-				print(res.get(i.name).resource_path)
-				if res.get(i.name).resource_path == dependency:
-					res.set(i.name, load(rename))
-		print(res.get('material').resource_path)
-	ResourceSaver.save(res)
-	EditorInterface.get_resource_filesystem().update_file(edited)
-	plugin.close_deps_editor()
+	static_rename(edited, rename, dependency)
+	close_window()
 	plugin.open_deps_editor(edited)
 	print('Done.')
+
+
+static func static_rename(edited, rename, dependency):
+	var res = load(edited) as Resource
+	if res is PackedScene:
+		var bundle = res.get('_bundled').variants
+		for i in bundle.size():
+			if bundle[i] is Resource:
+				if bundle[i].resource_path.split('::').size() == 1:
+					if bundle[i].resource_path == dependency:
+						bundle[i] = load(rename)
+		res.set_indexed(^'_bundled:variant', bundle)
+	for i in res.get_property_list():
+		if res.get(i.name) is Resource:
+			print(res.get(i.name).resource_path)
+			if res.get(i.name).resource_path == dependency:
+				res.set(i.name, load(rename))
+	ResourceSaver.save(res)
+	EditorInterface.get_resource_filesystem().update_file(edited)
 
 
 func recurse_dict(dict: Dictionary, value: Variant, prefix: StringName = &''):

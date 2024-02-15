@@ -33,7 +33,6 @@ enum FileMenu {
 	FILE_NEW_SCENE,
 }
 
-var action: Callable = func(id): print(id, 'not connected')
 
 # Copied from engine source code
 func context_fill(paths: PackedStringArray, display_path_dependent_options: bool, in_tree: bool = false):
@@ -82,8 +81,6 @@ func context_fill(paths: PackedStringArray, display_path_dependent_options: bool
 		else:
 			all_favorites = false
 	
-	#printt(all_favorites, all_files, all_files_scenes, all_folders, all_not_favorites)
-	
 	if all_files:
 		if all_files_scenes:
 			if filenames.size() == 1:
@@ -101,13 +98,13 @@ func context_fill(paths: PackedStringArray, display_path_dependent_options: bool
 		
 		if filenames.size() == 1:
 			add_item( tr('Edit Dependencies...'), FileMenu.FILE_DEPENDENCIES )
-			add_item( tr('View Owners...'), FileMenu.FILE_OWNERS )
+			#add_item( tr('View Owners...'), FileMenu.FILE_OWNERS )
 			add_separator()
 	
 	if paths.size() == 1 and display_path_dependent_options:
 		var new_menu := PopupMenu.new()
 		new_menu.name = 'New'
-		new_menu.connect('id_pressed', func(id, f = action): f.call(id))
+		new_menu.connect('id_pressed', _id_pressed)
 		
 		add_child(new_menu)
 		add_submenu_item( tr('Create New'), 'New', FileMenu.FILE_NEW )

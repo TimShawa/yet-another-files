@@ -22,7 +22,7 @@ var bottom = true
 const OWN_FAVS := false
 var config = ConfigFile.new()
 var defaults = ConfigFile.new()
-var deps_editor
+var deps_editor: Control
 
 
 func _has_main_screen() -> bool:
@@ -55,6 +55,8 @@ func _enter_tree() -> void:
 
 func _exit_tree() -> void:
 	close_deps_editor()
+	if is_instance_valid(deps_editor):
+		deps_editor.queue_free()
 	if !HIDE_BOTTOM and bottom:
 		remove_control_from_bottom_panel(drawer)
 	drawer.queue_free()
@@ -260,18 +262,18 @@ func yafcfg_revert():
 
 
 func open_deps_editor(path):
-	if !deps_editor:
+	if !is_instance_valid(deps_editor):
 		deps_editor = DependencyEditor.SCENE.instantiate()
 		deps_editor.plugin = self
+	if !deps_editor.is_inside_tree():
 		add_control_to_bottom_panel(deps_editor, 'Dependencies')
 	deps_editor.edit(path)
 	make_bottom_panel_item_visible(deps_editor)
 
 
 func close_deps_editor():
-	if deps_editor:
-		remove_control_from_bottom_panel(deps_editor)
-		deps_editor.queue_free()
-		deps_editor = null
+	if is_instance_valid(deps_editor):
+		if deps_editor.is_inside_tree():
+			remove_control_from_bottom_panel(deps_editor)
 
 #endregion
